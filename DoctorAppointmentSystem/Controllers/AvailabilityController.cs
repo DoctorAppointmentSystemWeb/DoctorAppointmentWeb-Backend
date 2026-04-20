@@ -1,4 +1,4 @@
-using System;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using DoctorAppointmentSystem.Services;
 
@@ -6,6 +6,7 @@ namespace DoctorAppointmentSystem.Controllers
 {
     [ApiController]
     [Route("api/availability")]
+    [Authorize] 
     public class AvailabilityController : ControllerBase
     {
         private readonly AvailabilityService _service;

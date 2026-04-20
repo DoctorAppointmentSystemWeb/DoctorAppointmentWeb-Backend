@@ -19,7 +19,6 @@ namespace DoctorAppointmentSystem.Services
 
         public string BookAppointment(AppointmentDto dto)
         {
-            // ?? Prevent double booking
             var exists = _context.Appointments.Any(a =>
                 a.DoctorId == dto.DoctorId &&
                 a.AppointmentDate.Date == dto.Date.Date &&
@@ -28,7 +27,6 @@ namespace DoctorAppointmentSystem.Services
             if (exists)
                 throw new Exception("Slot already booked");
 
-            // ?? Online & Offline must use different doctors
             var sameUserSameDay = _context.Appointments
                 .Where(a => a.UserId == dto.UserId && a.AppointmentDate.Date == dto.Date.Date)
                 .ToList();
@@ -57,17 +55,65 @@ namespace DoctorAppointmentSystem.Services
             return "Appointment Confirmed";
         }
 
-        public void UpdateStatus(int id, AppointmentStatus status)
+        public void UpdateStatusWithAuthorization(int id, AppointmentStatus status, int userId, string role)
         {
-            var appt = _context.Appointments.Find(id);
+            var appt = _context.Appointments.FirstOrDefault(a => a.Id == id);
 
             if (appt == null)
                 throw new Exception("Appointment not found");
 
+            if (role == "User")
+            {
+                if (appt.UserId != userId)
+                    throw new Exception("Unauthorized access");
+
+                if (status != AppointmentStatus.Cancelled)
+                    throw new Exception("Users can only cancel appointments");
+            }
+            else if (role == "Doctor")
+            {
+                if (appt.DoctorId != userId)
+                    throw new Exception("Unauthorized access");
+
+                if (status != AppointmentStatus.Completed &&
+                    status != AppointmentStatus.NoShow)
+                    throw new Exception("Doctor can only mark Completed or NoShow");
+            }
+            else if (role == "Admin")
+            {
+            }
+            else
+            {
+                throw new Exception("Invalid role");
+            }
+
             appt.Status = status;
             _context.SaveChanges();
 
-            AuditHelper.Log($"Appointment {id} updated to {status}");
+            AuditHelper.Log($"Appointment {id} updated to {status} by {role}");
+        }
+
+        public object GetAppointmentsByUser(int userId)
+        {
+            return _context.Appointments
+                .Where(a => a.UserId == userId)
+                .OrderByDescending(a => a.AppointmentDate)
+                .ToList();
+        }
+
+        public object GetAppointmentsByDoctor(int doctorId)
+        {
+            return _context.Appointments
+                .Where(a => a.DoctorId == doctorId)
+                .OrderByDescending(a => a.AppointmentDate)
+                .ToList();
+        }
+
+        public object GetAllAppointments()
+        {
+            return _context.Appointments
+                .OrderByDescending(a => a.AppointmentDate)
+                .ToList();
         }
     }
 }

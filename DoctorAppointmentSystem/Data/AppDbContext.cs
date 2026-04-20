@@ -1,5 +1,5 @@
-using Microsoft.EntityFrameworkCore;
 using DoctorAppointmentSystem.Models;
+using Microsoft.EntityFrameworkCore;
 
 namespace DoctorAppointmentSystem.Data
 {
@@ -10,7 +10,14 @@ namespace DoctorAppointmentSystem.Data
         {
         }
 
-        // MEMBER 3 Tables
+      
+        public DbSet<User> Users { get; set; }
+
+       
+        public DbSet<Specialty> Specialties { get; set; }
+        public DbSet<Doctor> Doctors { get; set; }
+
+        
         public DbSet<DoctorAvailability> DoctorAvailabilities { get; set; }
         public DbSet<Appointment> Appointments { get; set; }
 
@@ -18,15 +25,43 @@ namespace DoctorAppointmentSystem.Data
         {
             base.OnModelCreating(modelBuilder);
 
-            // Prevent double booking at DB level (IMPORTANT)
+            
+            modelBuilder.Entity<Specialty>()
+                .HasMany(s => s.Doctors)
+                .WithOne(d => d.Specialty)
+                .HasForeignKey(d => d.SpecialtyId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            
+            modelBuilder.Entity<DoctorAvailability>()
+                .HasOne<Doctor>()
+                .WithMany()
+                .HasForeignKey(a => a.DoctorId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            
+            modelBuilder.Entity<Appointment>()
+                .HasOne<Doctor>()
+                .WithMany()
+                .HasForeignKey(a => a.DoctorId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            
+            modelBuilder.Entity<Appointment>()
+                .HasOne<User>()
+                .WithMany()
+                .HasForeignKey(a => a.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+           
             modelBuilder.Entity<Appointment>()
                 .HasIndex(a => new { a.DoctorId, a.AppointmentDate, a.SlotTime })
                 .IsUnique();
 
-            // Optional: Better column precision
             modelBuilder.Entity<Appointment>()
                 .Property(a => a.Mode)
-                .HasMaxLength(20);
+                .HasMaxLength(20)
+                .IsRequired();
         }
     }
 }
